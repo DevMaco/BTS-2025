@@ -11,8 +11,8 @@ if (isset($_POST['Inscription'])) {
         $data = [
             "nom" => $_POST['nom'],
             "email" => $_POST['email'],
-            "mot_de_passe" => $_POST['mot_de_passe'],
-            "type" => $_POST['type'],
+            "mot_de_passe" => password_hash($_POST['mot_de_passe'], PASSWORD_DEFAULT),
+            "type" => $_POST['type']
         ];
         if ($unControleur->inscrireUser($data)) {
             $success = "Inscription réussie ! Vous pouvez vous connecter.";
@@ -106,20 +106,3 @@ if (!isset($_SESSION['email'])) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-<style>
-    /* Carte indisponible : niveau de gris et un peu d’opacité */
-.card.unavailable {
-  filter: grayscale(100%);
-  opacity: 0.6;
-}
-
-/* Bouton indisponible : style btn-secondary */
-.card.unavailable .btn-reserve {
-  pointer-events: none;    /* pas clicable */
-  filter: none;            /* annule le grayscale si besoin */
-  background-color: #6c757d !important;
-  border-color:    #6c757d !important;
-  color:           #fff   !important;
-}
-
-</style>

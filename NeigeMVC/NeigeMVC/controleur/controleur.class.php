@@ -20,9 +20,10 @@ class Controleur {
         return $this->unModele->selectLogementsByProprietaire($id_proprio);
     }
 
-    public function getLogements() {
-        return $this->unModele->selectAllLogements();
+    function getLogements($prix_max = null, $adresse = null, $disponible = null, $recherche = null) {
+        return $this->unModele->selectAllLogements($prix_max, $adresse, $disponible, $recherche);
     }
+    
 
     public function ajouterLogement($data) {
         $this->unModele->insertLogement($data);
