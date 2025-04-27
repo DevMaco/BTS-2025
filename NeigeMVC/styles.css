@@ -1,2 +1,0 @@
-.unavailable { filter: grayscale(100%); opacity: 0.6; }
-.btn-reserve[disabled] { background-color: #6c757d !important; border-color: #6c757d !important; color: #fff !important; pointer-events: none; }
