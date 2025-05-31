@@ -47,3 +47,5 @@ body {
         <p class="mt-3 text-center">Déjà inscrit ? <a href="index.php">Se connecter</a></p>
     </div>
 </div>
+
+<?php include('footer.php'); ?>

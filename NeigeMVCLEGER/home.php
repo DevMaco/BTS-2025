@@ -60,3 +60,5 @@ $logements = $unControleur->getLogements();
     <?php endif; ?>
   </div>
 </div>
+
+<?php include('vue/footer.php'); ?>

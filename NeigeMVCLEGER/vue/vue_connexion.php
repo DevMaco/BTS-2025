@@ -32,3 +32,5 @@ body {
         <p class="mt-3 text-center">Pas encore inscrit ? <a href="index.php?action=inscription">Inscription</a></p>
     </div>
 </div>
+
+<?php include('footer.php'); ?>

@@ -1,14 +1,7 @@
 package controleur;
 
-import vue.vue_logement;
-import vue.vue_reservation;
-
+// Contrôleur principal façon IrisEvent
 public class Controleur {
-    public static void afficherLogements() {
-        new vue_logement();
-    }
-
-    public static void afficherReservations() {
-        new vue_reservation();
-    }
+    // Ajoute ici les méthodes statiques pour relier les vues et le modele
+    // Par exemple : affichage d'un panel, gestion d'action, etc.
 }

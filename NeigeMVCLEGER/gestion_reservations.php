@@ -92,3 +92,5 @@ if ($type === 'client') {
     </div>
   <?php endif; ?>
 </div>
+
+<?php include('vue/footer.php'); ?>

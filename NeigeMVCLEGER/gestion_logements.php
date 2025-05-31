@@ -292,3 +292,5 @@ reservationModal.addEventListener('show.bs.modal', function (event) {
     this.querySelector('#modal_prix').value        = btn.getAttribute('data-prix') + ' €/nuit';
 });
 </script>
+
+<?php include('vue/footer.php'); ?>
