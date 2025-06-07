@@ -1,4 +1,10 @@
-module NeigeSoleil {
-    requires java.sql;
-    requires java.desktop;
+/**
+ * 
+ */
+/**
+ * 
+ */
+module NeigeSoleil2 {
+	requires java.sql;
+	requires java.desktop;
 }

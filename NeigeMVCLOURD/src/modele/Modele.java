@@ -1,244 +1,222 @@
 package modele;
 
+import bdd.BDD;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 public class Modele {
-    private static BDD uneBDD = new BDD("root", "", "localhost:3306", "neige"); // adapte si besoin
 
-    // Connexion utilisateur
-    public static HashMap<String, String> connexionUtilisateur(String email, String mdp) {
-        HashMap<String, String> user = null;
-        String requete = "SELECT * FROM user WHERE email = ? AND mot_de_passe = ?";
-        try {
-            uneBDD.seConnecter();
-            PreparedStatement ps = uneBDD.getMaConnexion().prepareStatement(requete);
+    // ----------- AUTH ADMIN -----------
+    public static boolean connexionAdmin(String email, String mdp) {
+        String sql = "SELECT * FROM user WHERE email=? AND mot_de_passe=? AND type='admin'";
+        try (Connection conn = BDD.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, email);
             ps.setString(2, mdp);
             ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                user = new HashMap<>();
-                user.put("id", rs.getString("id"));
-                user.put("nom", rs.getString("nom"));
-                user.put("email", rs.getString("email"));
-                user.put("type", rs.getString("type")); // client/proprietaire
-            }
-            ps.close();
-            uneBDD.seDeConnecter();
-        } catch (SQLException exp) {
-            System.out.println("Erreur connexionUtilisateur : " + exp.getMessage());
-        }
-        return user;
+            return rs.next();
+        } catch (SQLException e) { e.printStackTrace(); return false; }
     }
 
-    // Inscription utilisateur
-    public static boolean inscrireUtilisateur(HashMap<String, String> utilisateur) {
-        boolean ok = false;
-        try {
-            uneBDD.seConnecter();
-            // Vérifie si l'email existe déjà
-            String check = "SELECT * FROM user WHERE email = ?";
-            PreparedStatement psCheck = uneBDD.getMaConnexion().prepareStatement(check);
-            psCheck.setString(1, utilisateur.get("email"));
-            ResultSet rs = psCheck.executeQuery();
-            if (rs.next()) {
-                psCheck.close();
-                uneBDD.seDeConnecter();
-                return false; // email déjà utilisé
-            }
-            psCheck.close();
-
-            String req = "INSERT INTO user (nom, email, mot_de_passe, type) VALUES (?, ?, ?, ?)";
-            PreparedStatement ps = uneBDD.getMaConnexion().prepareStatement(req);
-            ps.setString(1, utilisateur.get("nom"));
-            ps.setString(2, utilisateur.get("email"));
-            ps.setString(3, utilisateur.get("mdp"));
-            ps.setString(4, utilisateur.get("type")); // client ou proprietaire
-            ps.executeUpdate();
-            ps.close();
-            uneBDD.seDeConnecter();
-            ok = true;
-        } catch (SQLException exp) {
-            System.out.println("Erreur inscription utilisateur : " + exp.getMessage());
-        }
-        return ok;
-    }
-
-    // Liste des logements
-    public static ArrayList<HashMap<String, String>> getLogements() {
-        ArrayList<HashMap<String, String>> liste = new ArrayList<>();
-        String requete = "SELECT * FROM logements";
-        try {
-            uneBDD.seConnecter();
-            Statement st = uneBDD.getMaConnexion().createStatement();
-            ResultSet rs = st.executeQuery(requete);
+    // ------------- CRUD USER -------------------
+    public static ArrayList<String[]> getListeUsers() {
+        ArrayList<String[]> liste = new ArrayList<>();
+        String sql = "SELECT * FROM user";
+        try (Connection conn = BDD.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
             while (rs.next()) {
-                HashMap<String, String> log = new HashMap<>();
-                log.put("id", rs.getString("id"));
-                log.put("proprietaire_id", rs.getString("proprietaire_id"));
-                log.put("titre", rs.getString("titre"));
-                log.put("description", rs.getString("description"));
-                log.put("adresse", rs.getString("adresse"));
-                log.put("prix_par_nuit", rs.getString("prix_par_nuit"));
-                log.put("disponible", rs.getString("disponible"));
-                log.put("code_postal", rs.getString("code_postal"));
-                log.put("nb_chambres", rs.getString("nb_chambres"));
-                log.put("type_logement", rs.getString("type_logement"));
-                liste.add(log);
+                String[] user = {
+                    String.valueOf(rs.getInt("id")),
+                    rs.getString("nom"),
+                    rs.getString("email"),
+                    rs.getString("mot_de_passe"),
+                    rs.getString("type")
+                };
+                liste.add(user);
             }
-            st.close();
-            uneBDD.seDeConnecter();
-        } catch (SQLException exp) {
-            System.out.println("Erreur getLogements : " + exp.getMessage());
-        }
+        } catch (SQLException e) { e.printStackTrace(); }
         return liste;
     }
 
-    // Ajout d'un logement par le propriétaire
-    public static boolean ajouterLogement(
-        int proprietaireId,
-        String titre,
-        String description,
-        String adresse,
-        double prixParNuit,
-        String codePostal,
-        int nbChambres,
-        String typeLogement
-    ) {
-        boolean ok = false;
-        String requete = "INSERT INTO logements (proprietaire_id, titre, description, adresse, prix_par_nuit, disponible, code_postal, nb_chambres, type_logement) "
-                       + "VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)";
-        try {
-            uneBDD.seConnecter();
-            PreparedStatement ps = uneBDD.getMaConnexion().prepareStatement(requete);
-            ps.setInt(1, proprietaireId);
+    public static boolean ajouterUser(String nom, String email, String mdp, String type) {
+        String sql = "INSERT INTO user(nom, email, mot_de_passe, type) VALUES (?, ?, ?, ?)";
+        try (Connection conn = BDD.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, nom);
+            ps.setString(2, email);
+            ps.setString(3, mdp);
+            ps.setString(4, type);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); return false; }
+    }
+
+    public static boolean supprimerUser(int id) {
+        String sql = "DELETE FROM user WHERE id=?";
+        try (Connection conn = BDD.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); return false; }
+    }
+
+    public static boolean majUser(int id, String nom, String email, String mdp, String type) {
+        String sql = "UPDATE user SET nom=?, email=?, mot_de_passe=?, type=? WHERE id=?";
+        try (Connection conn = BDD.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, nom);
+            ps.setString(2, email);
+            ps.setString(3, mdp);
+            ps.setString(4, type);
+            ps.setInt(5, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); return false; }
+    }
+
+    // ------------- CRUD LOGEMENT -------------------
+    public static ArrayList<String[]> getListeLogements() {
+        ArrayList<String[]> liste = new ArrayList<>();
+        String sql = "SELECT * FROM logements";
+        try (Connection conn = BDD.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                String[] logement = {
+                    String.valueOf(rs.getInt("id")),
+                    String.valueOf(rs.getInt("proprietaire_id")),
+                    rs.getString("titre"),
+                    rs.getString("description"),
+                    rs.getString("adresse"),
+                    String.valueOf(rs.getDouble("prix_par_nuit")),
+                    String.valueOf(rs.getBoolean("disponible")),
+                    rs.getString("code_postal"),
+                    rs.getString("nb_chambres"),
+                    rs.getString("type_logement")
+                };
+                liste.add(logement);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return liste;
+    }
+
+    public static boolean ajouterLogement(int proprietaire_id, String titre, String description, String adresse, double prix_par_nuit, boolean disponible, String code_postal, int nb_chambres, String type_logement) {
+        String sql = "INSERT INTO logements (proprietaire_id, titre, description, adresse, prix_par_nuit, disponible, code_postal, nb_chambres, type_logement) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = BDD.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, proprietaire_id);
             ps.setString(2, titre);
             ps.setString(3, description);
             ps.setString(4, adresse);
-            ps.setDouble(5, prixParNuit);
-            ps.setString(6, codePostal);
-            ps.setInt(7, nbChambres);
-            ps.setString(8, typeLogement);
-            ps.executeUpdate();
-            ps.close();
-            uneBDD.seDeConnecter();
-            ok = true;
-        } catch (SQLException exp) {
-            System.out.println("Erreur ajout logement : " + exp.getMessage());
-        }
-        return ok;
+            ps.setDouble(5, prix_par_nuit);
+            ps.setBoolean(6, disponible);
+            ps.setString(7, code_postal);
+            ps.setInt(8, nb_chambres);
+            ps.setString(9, type_logement);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); return false; }
     }
 
-    // Ajouter une réservation
-    public static boolean reserverLogement(
-        int logementId,
-        int clientId,
-        String nomClient,
-        String emailClient,
-        String telephone,
-        String dateDebut,
-        String dateFin,
-        int nbPersonnes,
-        String commentaire
-    ) {
-        boolean ok = false;
-        String requete = "INSERT INTO reservations (logement_id, client_id, nom_client, email_client, telephone, date_debut, date_fin, nb_personnes, commentaire, statut) "
-                       + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'en_attente')";
-        try {
-            uneBDD.seConnecter();
-            PreparedStatement ps = uneBDD.getMaConnexion().prepareStatement(requete);
-            ps.setInt(1, logementId);
-            ps.setInt(2, clientId);
-            ps.setString(3, nomClient);
-            ps.setString(4, emailClient);
+    public static boolean supprimerLogement(int id) {
+        String sql = "DELETE FROM logements WHERE id=?";
+        try (Connection conn = BDD.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); return false; }
+    }
+
+    public static boolean majLogement(int id, int proprietaire_id, String titre, String description, String adresse, double prix_par_nuit, boolean disponible, String code_postal, int nb_chambres, String type_logement) {
+        String sql = "UPDATE logements SET proprietaire_id=?, titre=?, description=?, adresse=?, prix_par_nuit=?, disponible=?, code_postal=?, nb_chambres=?, type_logement=? WHERE id=?";
+        try (Connection conn = BDD.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, proprietaire_id);
+            ps.setString(2, titre);
+            ps.setString(3, description);
+            ps.setString(4, adresse);
+            ps.setDouble(5, prix_par_nuit);
+            ps.setBoolean(6, disponible);
+            ps.setString(7, code_postal);
+            ps.setInt(8, nb_chambres);
+            ps.setString(9, type_logement);
+            ps.setInt(10, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); return false; }
+    }
+
+    // ------------- CRUD RESERVATION -------------------
+    public static ArrayList<String[]> getListeReservations() {
+        ArrayList<String[]> liste = new ArrayList<>();
+        String sql = "SELECT * FROM reservations";
+        try (Connection conn = BDD.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                String[] reservation = {
+                    String.valueOf(rs.getInt("id")),
+                    String.valueOf(rs.getInt("client_id")),
+                    rs.getString("nom_client"),
+                    rs.getString("prenom"),
+                    rs.getString("email_client"),
+                    rs.getString("telephone"),
+                    String.valueOf(rs.getInt("logement_id")),
+                    rs.getString("date_debut"),
+                    rs.getString("date_fin"),
+                    String.valueOf(rs.getInt("nb_personnes")),
+                    rs.getString("commentaire"),
+                    rs.getString("statut"),
+                    rs.getString("date_reservation")
+                };
+                liste.add(reservation);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return liste;
+    }
+
+    public static boolean ajouterReservation(int client_id, String nom_client, String prenom, String email_client, String telephone, int logement_id, String date_debut, String date_fin, int nb_personnes, String commentaire, String statut) {
+        String sql = "INSERT INTO reservations (client_id, nom_client, prenom, email_client, telephone, logement_id, date_debut, date_fin, nb_personnes, commentaire, statut) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = BDD.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, client_id);
+            ps.setString(2, nom_client);
+            ps.setString(3, prenom);
+            ps.setString(4, email_client);
             ps.setString(5, telephone);
-            ps.setString(6, dateDebut);
-            ps.setString(7, dateFin);
-            ps.setInt(8, nbPersonnes);
-            ps.setString(9, commentaire);
-            ps.executeUpdate();
-            ps.close();
-            uneBDD.seDeConnecter();
-            ok = true;
-        } catch (SQLException exp) {
-            System.out.println("Erreur reservation : " + exp.getMessage());
-        }
-        return ok;
+            ps.setInt(6, logement_id);
+            ps.setString(7, date_debut);
+            ps.setString(8, date_fin);
+            ps.setInt(9, nb_personnes);
+            ps.setString(10, commentaire);
+            ps.setString(11, statut);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); return false; }
     }
 
-    // Liste des réservations du client
-    public static ArrayList<HashMap<String, String>> getReservationsByClient(int clientId) {
-        ArrayList<HashMap<String, String>> liste = new ArrayList<>();
-        String requete = "SELECT * FROM reservations WHERE client_id = ?";
-        try {
-            uneBDD.seConnecter();
-            PreparedStatement ps = uneBDD.getMaConnexion().prepareStatement(requete);
-            ps.setInt(1, clientId);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                HashMap<String, String> res = new HashMap<>();
-                res.put("id", rs.getString("id"));
-                res.put("logement_id", rs.getString("logement_id"));
-                res.put("date_debut", rs.getString("date_debut"));
-                res.put("date_fin", rs.getString("date_fin"));
-                res.put("nb_personnes", rs.getString("nb_personnes"));
-                res.put("commentaire", rs.getString("commentaire"));
-                res.put("statut", rs.getString("statut"));
-                res.put("date_reservation", rs.getString("date_reservation"));
-                liste.add(res);
-            }
-            ps.close();
-            uneBDD.seDeConnecter();
-        } catch (SQLException exp) {
-            System.out.println("Erreur getReservationsByClient : " + exp.getMessage());
-        }
-        return liste;
+    public static boolean supprimerReservation(int id) {
+        String sql = "DELETE FROM reservations WHERE id=?";
+        try (Connection conn = BDD.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); return false; }
     }
 
-    // Liste des réservations du propriétaire
-    public static ArrayList<HashMap<String, String>> getReservationsByProprietaire(int proprietaireId) {
-        ArrayList<HashMap<String, String>> liste = new ArrayList<>();
-        String requete = "SELECT r.*, l.titre FROM reservations r " +
-                         "JOIN logements l ON r.logement_id = l.id " +
-                         "WHERE l.proprietaire_id = ?";
-        try {
-            uneBDD.seConnecter();
-            PreparedStatement ps = uneBDD.getMaConnexion().prepareStatement(requete);
-            ps.setInt(1, proprietaireId);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                HashMap<String, String> res = new HashMap<>();
-                res.put("id", rs.getString("id"));
-                res.put("titre_logement", rs.getString("titre"));
-                res.put("date_debut", rs.getString("date_debut"));
-                res.put("date_fin", rs.getString("date_fin"));
-                res.put("nb_personnes", rs.getString("nb_personnes"));
-                res.put("statut", rs.getString("statut"));
-                res.put("nom_client", rs.getString("nom_client"));
-                liste.add(res);
-            }
-            ps.close();
-            uneBDD.seDeConnecter();
-        } catch (Exception e) {
-            System.out.println("Erreur getReservationsByProprietaire : " + e.getMessage());
-        }
-        return liste;
-    }
-
-    // Modifier statut réservation (accepter/refuser)
-    public static void updateReservationStatut(int reservationId, String nouveauStatut) {
-        String requete = "UPDATE reservations SET statut = ? WHERE id = ?";
-        try {
-            uneBDD.seConnecter();
-            PreparedStatement ps = uneBDD.getMaConnexion().prepareStatement(requete);
-            ps.setString(1, nouveauStatut);
-            ps.setInt(2, reservationId);
-            ps.executeUpdate();
-            ps.close();
-            uneBDD.seDeConnecter();
-        } catch (Exception e) {
-            System.out.println("Erreur updateReservationStatut : " + e.getMessage());
-        }
+    public static boolean majReservation(int id, int client_id, String nom_client, String prenom, String email_client, String telephone, int logement_id, String date_debut, String date_fin, int nb_personnes, String commentaire, String statut) {
+        String sql = "UPDATE reservations SET client_id=?, nom_client=?, prenom=?, email_client=?, telephone=?, logement_id=?, date_debut=?, date_fin=?, nb_personnes=?, commentaire=?, statut=? WHERE id=?";
+        try (Connection conn = BDD.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, client_id);
+            ps.setString(2, nom_client);
+            ps.setString(3, prenom);
+            ps.setString(4, email_client);
+            ps.setString(5, telephone);
+            ps.setInt(6, logement_id);
+            ps.setString(7, date_debut);
+            ps.setString(8, date_fin);
+            ps.setInt(9, nb_personnes);
+            ps.setString(10, commentaire);
+            ps.setString(11, statut);
+            ps.setInt(12, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); return false; }
     }
 }
